@@ -22,3 +22,4 @@ medical-records/
 *.xlsx
 *.csv
 .DS_Store
+assets/models/*.task
