@@ -43,7 +43,8 @@
             "./assets/models/"
           ]
         }
-      ]
+      ],
+      "react-native-vision-camera"
     ]
   }
 }
