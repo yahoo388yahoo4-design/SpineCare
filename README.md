@@ -32,7 +32,11 @@ Cross-platform React Native / Expo prototype for Android and iOS. Interface lang
 ## Run locally
 - Node.js 20+
 - `npm install`
-- `npx expo start`
+- Download the MediaPipe Lite model before a native build:
+  - macOS/Linux: `mkdir -p assets/models && curl -L --fail -o assets/models/pose_landmarker_lite.task https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task`
+  - Windows PowerShell: `New-Item -ItemType Directory -Force assets/models; Invoke-WebRequest https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task -OutFile assets/models/pose_landmarker_lite.task`
+- `npx expo prebuild` then build a native development/release app. Native MediaPipe and Vision Camera modules do not run in Expo Go.
+- `npx expo start` is useful for the JS development server, but camera inference requires the native build.
 
 ## Android APK
 GitHub Actions builds a release APK on pushes to `main`. Open **Actions**, choose the latest **Android APK** run, and download the `spinecare-android-apk` artifact after a successful run.
@@ -44,4 +48,4 @@ A device-installable IPA requires an Apple Developer account, signing credential
 This is a prototype, not a medical device or a substitute for clinical care. It does not diagnose spinal conditions or measure disc protrusions, nerve compression, cysts, or bone lesions. The example exercise entries and animations are placeholders, not treatment recommendations. Given the described cervical findings including a focal C6 lesion, have the treating clinician explicitly approve the movements, range, repetitions, and stop rules before any use. Stop and seek urgent medical assessment for new or progressive weakness, loss of coordination, gait/balance difficulty, or bowel/bladder changes.
 
 ## Privacy
-No patient reports, scans, identifiers, or patient-specific findings are included in this repository. The app has no network backend or upload path for health data. Camera preview is local only and is not recorded by the app. Session and symptom data are stored on-device; avoid identifying details in notes. Uninstalling the app or clearing app data may remove local history. Do not commit patient data or secrets to source control, logs, issues, or build artifacts.
+No patient reports, scans, identifiers, or patient-specific findings are included in this repository. Session, symptom, and settings data remain on-device. Camera frames are processed locally and are not recorded or transmitted. If remote enhancement and landmark sharing are explicitly enabled, the app sends pose coordinates (not camera frames) to the configured server. Remote credentials are stored using platform secure storage. Use HTTPS whenever possible; the insecure HTTP option should be limited to a trusted private LAN. Review the server code and firewall configuration before deployment. Avoid identifying details in notes. Uninstalling the app or clearing app data may remove local history. Do not commit patient data or secrets to source control, logs, issues, or build artifacts.
