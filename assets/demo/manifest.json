@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "purpose": "technical landmark demonstrations only; not prescribed exercise, not validated clinical feedback",
+  "processor": "MediaPipe Pose Landmarker Lite, on offline source videos",
+  "mediapipeVersion": "0.10.21",
+  "videos": [
+    {
+      "id": "shoulder_press",
+      "region": "shoulders",
+      "title": {
+        "en": "Shoulder press · detection example",
+        "ro": "Ridicare deasupra capului · exemplu de detecție"
+      },
+      "commons": "https://commons.wikimedia.org/wiki/File:Shoulder_press_-_exercise_demonstration_video.webm",
+      "source": "https://upload.wikimedia.org/wikipedia/commons/6/69/Shoulder_press_-_exercise_demonstration_video.webm",
+      "file": "shoulder_press_overlay.mp4",
+      "attribution": "FitnessScape",
+      "license": "CC BY 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+      "modifications": "Resized, trimmed to 10 fps, MediaPipe pose landmarks and labels overlaid; converted to H.264 MP4 without audio.",
+      "frameCount": 69,
+      "detectedFrames": 69,
+      "detectionFraction": 1.0,
+      "width": 640,
+      "height": 360,
+      "fps": 10,
+      "sha256": "75412e3b7d9d2a2dd64cdd5b444befee41c9d51ae5aab9b93544237b069e4957",
+      "bytes": 166451,
+      "sourceSha256": "c0ffde36fca4e9702460ffe35ce2dea50f4c0a5ad9ef426d134466a45d0e3b7a",
+      "snapshots": [
+        "shoulder_press_000",
+        "shoulder_press_019",
+        "shoulder_press_038"
+      ]
+    },
+    {
+      "id": "bent_row",
+      "region": "upper",
+      "title": {
+        "en": "Bent-over row · detection example",
+        "ro": "Ramat din aplecat · exemplu de detecție"
+      },
+      "commons": "https://commons.wikimedia.org/wiki/File:Bent-over_row_-_exercise_demonstration_video.webm",
+      "source": "https://upload.wikimedia.org/wikipedia/commons/b/b2/Bent-over_row_-_exercise_demonstration_video.webm",
+      "file": "bent_row_overlay.mp4",
+      "attribution": "FitnessScape",
+      "license": "CC BY 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+      "modifications": "Resized, trimmed to 10 fps, MediaPipe pose landmarks and labels overlaid; converted to H.264 MP4 without audio.",
+      "frameCount": 52,
+      "detectedFrames": 52,
+      "detectionFraction": 1.0,
+      "width": 640,
+      "height": 360,
+      "fps": 10,
+      "sha256": "c7c488d4e02d3dec35edfa326496fc57141e355735049e135fc6dfbb630f6625",
+      "bytes": 122232,
+      "sourceSha256": "f6b90f2f72e9020dcc261fadb09725913fa31719a8614de26fab372826987f62",
+      "snapshots": [
+        "bent_row_000",
+        "bent_row_019",
+        "bent_row_038"
+      ]
+    }
+  ]
+}
