@@ -31,6 +31,8 @@ jobs:
         # Android Gradle plugin supports Java 17
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Validate JSX and bundled demo videos
+        run: node scripts/check_demo_assets.js
       - name: Download bundled MediaPipe pose model for offline inference
         run: |
           mkdir -p assets/models
@@ -97,6 +99,14 @@ jobs:
         with:
           name: spinecare-ui-smoke-evidence
           path: evidence/
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Upload static demo preflight evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spinecare-android-static-preflight
+          path: evidence/preflight/checks.json
           if-no-files-found: warn
           retention-days: 30
       - name: Upload APK
