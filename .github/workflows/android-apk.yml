@@ -41,6 +41,64 @@ jobs:
       - name: Build release APK
         working-directory: android
         run: ./gradlew assembleRelease --no-daemon
+      - name: Capture emulator smoke-test screenshots and screen recording
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          script: |
+            mkdir -p evidence
+            adb install android/app/build/outputs/apk/release/app-release.apk
+            adb shell monkey -p com.spinecare.mobile 1
+            sleep 15
+            adb shell wm size 1080x1920
+            adb shell screencap -p /sdcard/spinecare-home.png
+            adb pull /sdcard/spinecare-home.png evidence/01-home.png
+            adb shell input tap 270 185
+            sleep 2
+            adb shell screencap -p /sdcard/spinecare-plan.png
+            adb pull /sdcard/spinecare-plan.png evidence/02-plan.png
+            adb shell input tap 450 185
+            sleep 2
+            adb shell screencap -p /sdcard/spinecare-session.png
+            adb pull /sdcard/spinecare-session.png evidence/03-session.png
+            adb shell input tap 630 185
+            sleep 2
+            adb shell screencap -p /sdcard/spinecare-camera.png
+            adb pull /sdcard/spinecare-camera.png evidence/04-camera.png
+            adb shell input tap 810 185
+            sleep 2
+            adb shell screencap -p /sdcard/spinecare-progress.png
+            adb pull /sdcard/spinecare-progress.png evidence/05-progress.png
+            adb shell input tap 990 185
+            sleep 2
+            adb shell screencap -p /sdcard/spinecare-settings.png
+            adb pull /sdcard/spinecare-settings.png evidence/06-settings.png
+            (adb shell screenrecord --time-limit 30 /sdcard/spinecare-smoke.mp4 >/dev/null 2>&1 &) 
+            sleep 2
+            adb shell input tap 90 185
+            sleep 2
+            adb shell input tap 270 185
+            sleep 2
+            adb shell input tap 450 185
+            sleep 2
+            adb shell input tap 630 185
+            sleep 2
+            adb shell input tap 810 185
+            sleep 2
+            adb shell input tap 990 185
+            sleep 8
+            adb pull /sdcard/spinecare-smoke.mp4 evidence/spinecare-smoke.mp4
+      - name: Upload UI test evidence
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: spinecare-ui-smoke-evidence
+          path: evidence/
+          if-no-files-found: warn
+          retention-days: 30
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
