@@ -1,0 +1,35 @@
+name: iOS IPA (requires Apple signing)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ipa:
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - name: Explain signing requirement
+        run: |
+          echo "A device-installable IPA requires Apple Developer signing credentials and a provisioning profile."
+          echo "Configure Expo EAS and Apple signing credentials before enabling an IPA build."
+          echo "This workflow intentionally does not fabricate or publish an unsigned IPA."
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Validate Expo iOS bundle
+        run: npx expo export --platform ios
+      - name: Upload iOS JavaScript bundle (not an IPA)
+        uses: actions/upload-artifact@v4
+        with:
+          name: spinecare-ios-validation-bundle
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
