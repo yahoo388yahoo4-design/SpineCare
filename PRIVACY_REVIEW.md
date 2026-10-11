@@ -7,4 +7,6 @@
 - The remote server URL, username, and sharing preferences are stored locally; the password is stored with Expo SecureStore. HTTPS is strongly recommended. Explicit HTTP mode is intended only for a trusted private LAN because HTTP Basic credentials are otherwise unencrypted.
 - The app can estimate general pose landmarks locally, but it does not perform clinical assessment or validate movement safety. The sample remote server only computes technical landmark visibility.
 - Do not commit patient data, signing keys, API tokens, provisioning profiles, or health records.
-- The build pipeline uploads only the generated APK as a GitHub Actions artifact.
+- The demo clips embedded with overlay are CC BY 3.0 example footage by FitnessScape, not recorded users or patients. Their frames and technical pose-point JSON are included in the demonstration evidence artifacts; no user-recorded camera frames are published.
+- During active sessions, sampled landmark traces saved locally may reveal sensitive movement information. Voice recognition is tap-to-talk and can involve the platform's speech service/network.
+- Build pipelines may upload APKs, unsigned iOS archives, video processing evidence, static tests and emulator screenshots. No clinical records should be committed or uploaded.

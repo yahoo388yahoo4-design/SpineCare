@@ -78,6 +78,14 @@ jobs:
             sleep 2
             adb shell screencap -p /sdcard/spinecare-settings.png
             adb pull /sdcard/spinecare-settings.png evidence/06-settings.png
+            # Capture a separate demo-gallery screenshot (only after the app launches).
+            adb shell input tap 630 110
+            sleep 2
+            adb shell input swipe 540 1500 540 420 500
+            adb shell input swipe 540 1500 540 420 500
+            sleep 3
+            adb shell screencap -p /sdcard/spinecare-demos.png
+            adb pull /sdcard/spinecare-demos.png evidence/07-detected-demo-gallery.png
             (adb shell screenrecord --time-limit 30 /sdcard/spinecare-smoke.mp4 >/dev/null 2>&1 &) 
             sleep 2
             adb shell input tap 90 110
