@@ -56,39 +56,39 @@ jobs:
             adb shell wm size 1080x1920
             adb shell screencap -p /sdcard/spinecare-home.png
             adb pull /sdcard/spinecare-home.png evidence/01-home.png
-            adb shell input tap 270 185
+            adb shell input tap 270 110
             sleep 2
             adb shell screencap -p /sdcard/spinecare-plan.png
             adb pull /sdcard/spinecare-plan.png evidence/02-plan.png
-            adb shell input tap 450 185
+            adb shell input tap 450 110
             sleep 2
             adb shell screencap -p /sdcard/spinecare-session.png
             adb pull /sdcard/spinecare-session.png evidence/03-session.png
-            adb shell input tap 630 185
+            adb shell input tap 630 110
             sleep 2
             adb shell screencap -p /sdcard/spinecare-camera.png
             adb pull /sdcard/spinecare-camera.png evidence/04-camera.png
-            adb shell input tap 810 185
+            adb shell input tap 810 110
             sleep 2
             adb shell screencap -p /sdcard/spinecare-progress.png
             adb pull /sdcard/spinecare-progress.png evidence/05-progress.png
-            adb shell input tap 990 185
+            adb shell input tap 990 110
             sleep 2
             adb shell screencap -p /sdcard/spinecare-settings.png
             adb pull /sdcard/spinecare-settings.png evidence/06-settings.png
             (adb shell screenrecord --time-limit 30 /sdcard/spinecare-smoke.mp4 >/dev/null 2>&1 &) 
             sleep 2
-            adb shell input tap 90 185
+            adb shell input tap 90 110
             sleep 2
-            adb shell input tap 270 185
+            adb shell input tap 270 110
             sleep 2
-            adb shell input tap 450 185
+            adb shell input tap 450 110
             sleep 2
-            adb shell input tap 630 185
+            adb shell input tap 630 110
             sleep 2
-            adb shell input tap 810 185
+            adb shell input tap 810 110
             sleep 2
-            adb shell input tap 990 185
+            adb shell input tap 990 110
             sleep 8
             adb pull /sdcard/spinecare-smoke.mp4 evidence/spinecare-smoke.mp4
       - name: Upload UI test evidence
