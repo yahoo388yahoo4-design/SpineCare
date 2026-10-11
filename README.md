@@ -2,25 +2,29 @@
 
 Cross-platform React Native / Expo prototype for Android and iOS. Interface languages: English and Romanian.
 
-## Implemented in this prototype
-- Five screens: Today, Plan, Session, Camera, Progress.
-- English/Romanian UI switch.
-- Editable local selection of placeholder exercise entries (not a medical prescription).
-- Animated stick-figure illustration placeholders.
-- Session elapsed timer, set counter, and completion log.
-- Symptom score check-ins (0–10) with a short optional note.
-- On-device persistence for selected plan, sessions, and check-ins using AsyncStorage.
-- Camera permission and live local preview on native devices; front/side/back/oblique framing guidance. Back view uses the rear camera.
-- Safety and privacy notices.
-- GitHub Actions Android APK build workflow.
+## Implemented in the current app
 
-## Not implemented / requires additional work
-- No clinician-approved exercise library or clinician-recorded exercise videos are supplied.
-- No automatic pose/joint tracking, rep counting from camera, movement-quality scoring, spinal alignment assessment, or GPU/ML inference.
-- No server, account system, cloud sync, clinician dashboard, data export, or remote monitoring.
-- The camera view selector provides framing instructions; side/oblique positions require the user to turn their body.
-- No clinical validation, accessibility audit, device matrix testing, or medical-device regulatory review has been completed.
-- The iOS workflow validates an iOS bundle only; it does not produce a signed, installable IPA. An IPA requires Apple signing credentials and provisioning configured through EAS or Xcode.
+- Five screens: Today, Plan, Session, Camera, Progress.
+- English/Romanian interface switch.
+- Local exercise plan selection.
+- User-created exercise entries with clinician instructions, clinician-set target sets/repetitions, optional video URL, explicit clinician-approval acknowledgement, and delete controls. The app does not validate the medical safety of those entries.
+- Animated figure is clearly illustrative, not an exercise demonstration.
+- Session timer, manual set counter, exercise selection, session completion history.
+- Symptom check-ins (0–10) with optional note and before/after phase.
+- On-device persistence for plans, custom entries, sessions, and check-ins using AsyncStorage.
+- Share-sheet export of local session/check-in data as CSV-formatted text.
+- Camera permission and live local preview on native devices; front/side/back/oblique framing guidance. Back view uses the rear camera.
+- Safety, privacy, and emergency symptom notices.
+- GitHub Actions Android APK build workflow.
+- iOS bundle validation workflow (not an installable signed IPA).
+
+## Still not implemented (do not treat as complete)
+
+- **Automatic pose/joint tracking, camera-based repetition counting, movement-quality scoring, or GPU/ML inference.** The camera is a preview/framing aid only. These need a selected and licensed on-device model, a native frame-processing integration, device testing, and clinical validation. No clinical accuracy is claimed.
+- **Clinician-approved exercise/video catalogue.** No medical exercise or video content is shipped. The app lets a user enter instructions/video links supplied by their clinician.
+- **Cloud accounts, encrypted server sync, clinician dashboard, and remote monitoring.** Data remains local; do not assume backup or remote access.
+- Automated tests, full accessibility audit, device-matrix testing, clinical validation, or medical-device regulatory review.
+- A signed installable iOS IPA. As requested, signing is not included; IPA creation still requires Apple signing credentials and provisioning.
 
 ## Run locally
 - Node.js 20+
