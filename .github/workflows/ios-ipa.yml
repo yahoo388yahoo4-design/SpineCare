@@ -33,6 +33,8 @@ jobs:
           ruby-version: '3.2'
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Validate JSX and bundled demo videos
+        run: node scripts/check_demo_assets.js
       - name: Download MediaPipe model
         run: |
           mkdir -p assets/models
@@ -53,6 +55,14 @@ jobs:
           ditto build/SpineCare-unsigned.xcarchive/Products/Applications/SpineCare.app build/ipa/Payload/SpineCare.app
           (cd build/ipa && zip -qry ../SpineCare-unsigned.ipa Payload)
           ditto -c -k --sequesterRsrc --keepParent build/SpineCare-unsigned.xcarchive build/SpineCare-unsigned.xcarchive.zip
+      - name: Upload static demo preflight evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spinecare-ios-static-preflight
+          path: evidence/preflight/checks.json
+          if-no-files-found: warn
+          retention-days: 30
       - name: Upload unsigned archive
         uses: actions/upload-artifact@v4
         with:
