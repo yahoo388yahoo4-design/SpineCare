@@ -12,7 +12,7 @@ Cross-platform React Native / Expo prototype for Android and iOS. Interface lang
 - On-device persistence for plans, custom entries, sessions, check-ins, and non-secret settings using AsyncStorage.
 - CSV-formatted local data sharing through the device share sheet.
 - **On-device MediaPipe Pose Landmarker integration** using a native React Native/Vision Camera module. The Android and iOS build workflows download the lightweight pose model and bundle it with the native app so inference does not need a network connection after installation. This requires a native development/release build; Expo Go cannot load the native module.
-- Settings for local pose processing, CPU/GPU/NNAPI delegate, frame processing rate, remote server URL/IP, analysis endpoint, username, password, remote opt-in, landmark sharing, and explicit insecure-private-LAN HTTP allowance.
+- Settings for local pose processing, CPU/GPU delegate, frame processing rate, remote server URL/IP, analysis endpoint, username, password, remote opt-in, landmark sharing, and explicit insecure-private-LAN HTTP allowance.
 - Remote server connection check. If the server is unreachable, the app continues local operation and does not wait for a remote result.
 - Remote enhancement sends pose landmarks only, never camera frames. Password is stored using platform secure storage; other preferences remain local.
 - Optional example FastAPI service in `server/` with authenticated `/health` and `/analyze/pose` endpoints. Its current remote summary is a technical landmark-visibility check, not a clinical assessment.
