@@ -219,11 +219,13 @@ def build():
         min_tracking_confidence=0.35,
     )
     results = []
-    with tempfile.TemporaryDirectory() as temp, vision.PoseLandmarker.create_from_options(options) as detector:
+    with tempfile.TemporaryDirectory() as temp:
         for item in SOURCE_CLIPS:
             raw = Path(temp) / (item["id"] + ".webm")
             download(item["source"], raw)
-            results.append(process_one(detector, item, raw))
+            # VIDEO-mode timestamps restart at zero for each independent clip.
+            with vision.PoseLandmarker.create_from_options(options) as detector:
+                results.append(process_one(detector, item, raw))
     manifest = {"schemaVersion": 1, "purpose": "technical landmark demonstrations only; not prescribed exercise, not validated clinical feedback",
                 "processor": "MediaPipe Pose Landmarker Lite, on offline source videos",
                 "mediapipeVersion": mp.__version__, "videos": results}
