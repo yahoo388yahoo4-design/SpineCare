@@ -12,14 +12,17 @@
         "NSCameraUsageDescription": "Camera is used for on-device pose landmarks during exercise setup. Frames are processed locally; only pose landmarks may be shared if you explicitly enable remote enhancement.",
         "NSAppTransportSecurity": {
           "NSAllowsLocalNetworking": true
-        }
+        },
+        "NSSpeechRecognitionUsageDescription": "Recognize spoken commands while you use SpineCare. Speech services may require network access.",
+        "NSMicrophoneUsageDescription": "Microphone access is used only when you initiate voice commands."
       }
     },
     "android": {
       "permissions": [
         "CAMERA",
         "INTERNET",
-        "ACCESS_NETWORK_STATE"
+        "ACCESS_NETWORK_STATE",
+        "RECORD_AUDIO"
       ],
       "package": "com.spinecare.mobile",
       "versionCode": 1,
@@ -45,7 +48,14 @@
         }
       ],
       "react-native-vision-camera",
-      "./plugins/withMediapipePodfile"
+      "./plugins/withMediapipePodfile",
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Allow SpineCare to listen for your spoken exercise commands when you tap the microphone.",
+          "speechRecognitionPermission": "Allow SpineCare to recognize English or Romanian spoken exercise commands."
+        }
+      ]
     ]
   }
 }
