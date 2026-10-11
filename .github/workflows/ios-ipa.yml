@@ -1,40 +1,62 @@
-name: iOS IPA (requires Apple signing)
+name: iOS unsigned build
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - '**'
+      - '.github/workflows/ios-ipa.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: spinecare-ios-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  ipa:
+  build-ios:
+    name: Build unsigned iOS app bundle (local signing)
     runs-on: macos-15
     timeout-minutes: 60
     steps:
-      - name: Explain signing requirement
-        run: |
-          echo "A device-installable IPA requires Apple Developer signing credentials and a provisioning profile."
-          echo "Configure Expo EAS and Apple signing credentials before enabling an IPA build."
-          echo "This workflow intentionally does not fabricate or publish an unsigned IPA."
       - name: Checkout
         uses: actions/checkout@v4
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
       - name: Install dependencies
         run: npm install --no-audit --no-fund
-      - name: Download bundled MediaPipe pose model for offline inference
+      - name: Download MediaPipe model
         run: |
           mkdir -p assets/models
           curl --fail --location --retry 3 --output assets/models/pose_landmarker_lite.task https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task
           test -s assets/models/pose_landmarker_lite.task
-      - name: Validate Expo iOS bundle
-        run: npx expo export --platform ios
-      - name: Upload iOS JavaScript bundle (not an IPA)
+      - name: Generate iOS native project
+        run: npx expo prebuild --platform ios --no-install
+      - name: Install CocoaPods dependencies
+        working-directory: ios
+        run: pod install --repo-update
+      - name: Archive unsigned app for local signing
+        run: |
+          set -o pipefail
+          xcodebuild -workspace ios/SpineCare.xcworkspace -scheme SpineCare -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -archivePath "$PWD/build/SpineCare-unsigned.xcarchive" CODE_SIGNING_ALLOWED=NO archive | tee xcodebuild-archive.log
+      - name: Package unsigned archive and logs
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent build/SpineCare-unsigned.xcarchive build/SpineCare-unsigned.xcarchive.zip
+      - name: Upload unsigned archive
         uses: actions/upload-artifact@v4
         with:
-          name: spinecare-ios-validation-bundle
-          path: dist/
+          name: spinecare-ios-unsigned-xcarchive
+          path: |
+            build/SpineCare-unsigned.xcarchive.zip
+            xcodebuild-archive.log
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 30
