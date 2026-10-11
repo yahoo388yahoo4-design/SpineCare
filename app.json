@@ -9,12 +9,14 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "Camera preview helps you position the device for an approved exercise. Video is not saved or uploaded by this prototype."
+        "NSCameraUsageDescription": "Camera is used for on-device pose landmarks during exercise setup. Frames are processed locally; only pose landmarks may be shared if you explicitly enable remote enhancement."
       }
     },
     "android": {
       "permissions": [
-        "CAMERA"
+        "CAMERA",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
       ],
       "package": "com.spinecare.mobile",
       "versionCode": 1
@@ -24,6 +26,18 @@
         "expo-camera",
         {
           "cameraPermission": "Allow SpineCare to show a live camera preview for exercise setup. This prototype does not upload or save camera video."
+        }
+      ],
+      [
+        "expo-secure-store",
+        {}
+      ],
+      [
+        "react-native-mediapipe-posedetection",
+        {
+          "assetsPaths": [
+            "./assets/models/"
+          ]
         }
       ]
     ]
