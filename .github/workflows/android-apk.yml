@@ -31,6 +31,11 @@ jobs:
         # Android Gradle plugin supports Java 17
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Download bundled MediaPipe pose model for offline inference
+        run: |
+          mkdir -p assets/models
+          curl --fail --location --retry 3 --output assets/models/pose_landmarker_lite.task https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task
+          test -s assets/models/pose_landmarker_lite.task
       - name: Generate native Android project
         run: npx expo prebuild --platform android --no-install
       - name: Build release APK
