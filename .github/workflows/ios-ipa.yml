@@ -35,6 +35,8 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Validate JSX and bundled demo videos
         run: node scripts/check_demo_assets.js
+      - name: Verify MediaPipe CocoaPods Swift bridge import
+        run: node scripts/patch-mediapipe-ios.js
       - name: Download MediaPipe model
         run: |
           mkdir -p assets/models
@@ -55,6 +57,14 @@ jobs:
           ditto build/SpineCare-unsigned.xcarchive/Products/Applications/SpineCare.app build/ipa/Payload/SpineCare.app
           (cd build/ipa && zip -qry ../SpineCare-unsigned.ipa Payload)
           ditto -c -k --sequesterRsrc --keepParent build/SpineCare-unsigned.xcarchive build/SpineCare-unsigned.xcarchive.zip
+      - name: Upload Xcode archive diagnostic log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spinecare-ios-xcode-failure-log
+          path: xcodebuild-archive.log
+          if-no-files-found: warn
+          retention-days: 30
       - name: Upload static demo preflight evidence
         if: always()
         uses: actions/upload-artifact@v4
