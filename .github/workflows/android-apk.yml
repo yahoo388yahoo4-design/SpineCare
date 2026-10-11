@@ -31,8 +31,10 @@ jobs:
         # Android Gradle plugin supports Java 17
       - name: Install dependencies
         run: npm install --no-audit --no-fund
-      - name: Validate JSX and bundled demo videos
-        run: node scripts/check_demo_assets.js
+      - name: Validate JSX, demo assets and variant identity
+        run: |
+          node scripts/check_demo_assets.js
+          node scripts/verify_app_identity.js
       - name: Download bundled MediaPipe pose model for offline inference
         run: |
           mkdir -p assets/models
@@ -40,9 +42,20 @@ jobs:
           test -s assets/models/pose_landmarker_lite.task
       - name: Generate native Android project
         run: npx expo prebuild --platform android --no-install
+      - name: Verify generated Android application ID and launcher label
+        run: node scripts/verify_app_identity.js --android-native
       - name: Build release APK
         working-directory: android
         run: ./gradlew assembleRelease --no-daemon
+      - name: Verify release APK ID and prepare distinct download filename
+        run: |
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          AAPT="$(find "$ANDROID_HOME/build-tools" -maxdepth 2 -name aapt -type f | sort -V | tail -n 1)"
+          test -x "$AAPT"
+          "$AAPT" dump badging "$APK" | grep -F "package: name='com.spinecare.mobile.gpt6'"
+          mkdir -p build/distribution
+          cp "$APK" build/distribution/SpineCare-GPT6-android-v0.2.0.apk
+          echo 'IDENTITY_PASS release Android APK: com.spinecare.mobile.gpt6'
       - name: Capture emulator smoke-test screenshots and screen recording
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -53,7 +66,7 @@ jobs:
           script: |
             mkdir -p evidence
             adb install android/app/build/outputs/apk/release/app-release.apk
-            adb shell monkey -p com.spinecare.mobile 1
+            adb shell monkey -p com.spinecare.mobile.gpt6 1
             sleep 15
             adb shell wm size 1080x1920
             adb shell screencap -p /sdcard/spinecare-home.png
@@ -120,7 +133,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: spinecare-android-apk
-          path: android/app/build/outputs/apk/release/*.apk
+          name: spinecare-gpt6-android-apk
+          path: build/distribution/SpineCare-GPT6-android-v0.2.0.apk
           if-no-files-found: error
           retention-days: 30

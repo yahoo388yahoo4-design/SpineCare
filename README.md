@@ -1,6 +1,24 @@
-# SpineCare Mobile
+# SpineCare GPT-6 Mobile
 
 Cross-platform React Native / Expo prototype for Android and iOS. Interface languages: English and Romanian.
+
+## Separate GPT-6 application identity (side-by-side installs)
+
+This GPT-6 build is intentionally distinct from other SpineCare variants:
+
+| Setting | Value |
+| --- | --- |
+| Android application ID (package) | `com.spinecare.mobile.gpt6` |
+| iOS bundle identifier | `com.spinecare.mobile.gpt6` |
+| Installed launcher label | `SpineCare GPT-6` |
+| Expo slug | `spinecare-gpt6` |
+| npm project name | `spinecare-mobile-gpt6` |
+| App version | `0.2.0` (Android versionCode 2 / iOS buildNumber 2) |
+
+The native iOS Xcode target/scheme remains `SpineCare`; the home-screen label and bundle ID are distinct. CI verifies the generated native identifiers and packaged IPA/APK IDs and names the downloadable artifacts `SpineCare-GPT6-...`.
+
+**Installation warning:** changing identifiers makes a new app, not an in-place update of `com.spinecare.mobile`. Prior local plans, session traces, and check-ins remain in the old app's isolated local storage and do not automatically move to this variant. The two apps can coexist. For installing the unsigned iOS archive on hardware, the signing profile/certificate must permit the new bundle ID.
+
 
 ## Implemented in the current app
 
