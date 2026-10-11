@@ -9,7 +9,10 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSCameraUsageDescription": "Camera is used for on-device pose landmarks during exercise setup. Frames are processed locally; only pose landmarks may be shared if you explicitly enable remote enhancement."
+        "NSCameraUsageDescription": "Camera is used for on-device pose landmarks during exercise setup. Frames are processed locally; only pose landmarks may be shared if you explicitly enable remote enhancement.",
+        "NSAppTransportSecurity": {
+          "NSAllowsLocalNetworking": true
+        }
       }
     },
     "android": {
@@ -19,7 +22,8 @@
         "ACCESS_NETWORK_STATE"
       ],
       "package": "com.spinecare.mobile",
-      "versionCode": 1
+      "versionCode": 1,
+      "usesCleartextTraffic": true
     },
     "plugins": [
       [
