@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "SpineCare",
+    "slug": "spinecare-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Camera preview helps you position the device for an approved exercise. Video is not saved or uploaded by this prototype."
+      }
+    },
+    "android": {
+      "permissions": [
+        "CAMERA"
+      ],
+      "package": "com.spinecare.mobile",
+      "versionCode": 1
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow SpineCare to show a live camera preview for exercise setup. This prototype does not upload or save camera video."
+        }
+      ]
+    ]
+  }
+}
