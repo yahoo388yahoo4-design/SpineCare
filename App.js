@@ -136,7 +136,7 @@ export default function App(){
   const [cameraPrefs,setCameraPrefs]=useState(cleanCameraPrefs(null));
   const [storageReady,setStorageReady]=useState(false),[storageError,setStorageError]=useState('');
   const [sessionSaving,setSessionSaving]=useState(false),[pendingDraft,setPendingDraft]=useState(null);
-  const savingSessionRef=useRef(false),storeRef=useRef(null);
+  const savingSessionRef=useRef(false),sessionSaveItemRef=useRef(null),storeRef=useRef(null);
   if(!storeRef.current)storeRef.current=createSessionStore(AsyncStorage,STORE);
   const allCameraDevices=useCameraDevices();
   const {width:screenWidth,height:screenHeight}=useWindowDimensions();
@@ -229,13 +229,13 @@ export default function App(){
    const at=Date.now();
    try{await storeRef.current.update({draftSession:{startedAt:at,selected:plan[0],exerciseIds:plan.slice(),sets:0,poseTrace:[],poseView:view,cameraPrefs}})}
    catch(e){Alert.alert(t.storageErrorTitle,t.saveFailed);return}
-   setPendingDraft(null);setSelected(plan[0]);setSets(0);poseSamples.current=[];lastCapture.current=0;
+   sessionSaveItemRef.current=null;setPendingDraft(null);setSelected(plan[0]);setSets(0);poseSamples.current=[];lastCapture.current=0;
    setStartedAt(at);setNow(at);setActive(true);setTab(2);setPhase('before');speak(t.voiceStart);
   };
   const restoreDraft=()=>{
    if(!pendingDraft||active)return;
    setStartedAt(pendingDraft.startedAt);setNow(Date.now());setSelected(pendingDraft.selected||plan[0]||null);
-   setSets(pendingDraft.sets||0);poseSamples.current=pendingDraft.poseTrace||[];
+   sessionSaveItemRef.current=null;setSets(pendingDraft.sets||0);poseSamples.current=pendingDraft.poseTrace||[];
    lastCapture.current=0;setActive(true);setPhase('before');setPendingDraft(null);setTab(2);
   };
   const discardDraft=async()=>{
@@ -243,10 +243,10 @@ export default function App(){
    catch(e){Alert.alert(t.storageErrorTitle,t.saveFailed)}
   };
   useEffect(()=>{if(!active||!storageReady||!startedAt)return;
-   const writeDraft=()=>storeRef.current.update({draftSession:{
+   const writeDraft=()=>{if(savingSessionRef.current)return;return storeRef.current.update({draftSession:{
     startedAt,selected,exerciseIds:plan.slice(),sets,poseTrace:poseSamples.current.slice(),
     poseView:view,cameraPrefs
-   }}).catch(()=>{});
+   }}).catch(()=>{})};
    const id=setInterval(writeDraft,5000);
    return()=>clearInterval(id);
   },[active,storageReady,startedAt,selected,sets,plan,view,cameraPrefs]);
@@ -254,13 +254,14 @@ export default function App(){
    if(!active||!startedAt||savingSessionRef.current)return;
    savingSessionRef.current=true;setSessionSaving(true);
    const finishedAt=Date.now();
-   const item={id:String(finishedAt)+'-'+Math.random().toString(36).slice(2,8),
+   const item={id:sessionSaveItemRef.current?.id||String(finishedAt)+'-'+Math.random().toString(36).slice(2,8),
     date:new Date(finishedAt).toISOString(),durationSeconds:Math.max(0,Math.floor((finishedAt-startedAt)/1000)),
     sets,exerciseIds:plan.slice(),symptomBefore:phase==='before'?symptom:null,
     poseTrace:poseSamples.current.slice(),poseView:view,cameraPrefs};
+   sessionSaveItemRef.current=item;
    try{
     const stored=await storeRef.current.appendSession(item);
-    setHistory(stored.history);setPendingDraft(null);
+    setHistory(stored.history);setPendingDraft(null);sessionSaveItemRef.current=null;
     setReplay(stored.history[0]);setReplayIndex(0);setReplayPlaying(false);
     setActive(false);setStartedAt(null);setPhase('after');setCameraOn(false);
     setTab(4);speak(t.voiceFinish);
@@ -292,7 +293,7 @@ export default function App(){
    {tab===1&&<><Text style={s.hero}>{t.plan}</Text><Text style={s.body}>{t.noPlan}</Text><Text style={s.cardTitle}>{t.region}</Text><View style={s.row}>{REGIONS.map(r=><Pressable key={r.id} onPress={()=>setRegion(r.id)} style={[s.chip,region===r.id&&s.chipActive]}><Text style={[s.chipText,region===r.id&&s.chipTextActive]}>{r[lang]}</Text></Pressable>)}</View><Text style={s.bodySmall}>{t.regionAssignment}</Text>{filteredLibrary.map(e=><View key={e.id} style={s.exercise}><Demo label={t.demo}/><View style={{flex:1}}><Text style={s.cardTitle}>{e.title[lang]}</Text><Text style={s.bodySmall}>{e.description[lang]}</Text><Text style={s.muted}>{REGIONS.find(r=>r.id===(e.region||'full'))?.[lang]}</Text><Text style={s.link}>{e.custom&&e.approved?'✓ '+t.approved:t.approved}</Text>{e.setsTarget||e.repsTarget?<Text style={s.bodySmall}>{t.targetSets}: {e.setsTarget||'—'} · {t.targetReps}: {e.repsTarget||'—'}</Text>:null}{e.videoUrl?<><Text style={s.bodySmall}>{t.videoFormat}</Text>{/^https:\/\/.*\.(mp4|m3u8)(\?.*)?$/i.test(e.videoUrl)?<GuideVideo key={e.id} url={e.videoUrl} unavailable={t.missingVideo}/>:<Btn secondary onPress={()=>Linking.openURL(e.videoUrl).catch(()=>Alert.alert(t.guideVideo,t.missingVideo))}>{t.openVideo}</Btn>}</>:null}<Btn secondary onPress={()=>togglePlan(e)}>{plan.includes(e.id)?t.remove:t.add}</Btn>{e.custom?<Btn secondary onPress={()=>removeCustomExercise(e)}>{t.deleteExercise}</Btn>:null}</View></View>)}<View style={s.card}><Text style={s.cardTitle}>{t.customTitle}</Text><Text style={s.bodySmall}>{t.customEmpty}</Text><TextInput value={formName} onChangeText={setFormName} placeholder={t.exerciseName} maxLength={80} style={s.input}/><TextInput value={formInstructions} onChangeText={setFormInstructions} placeholder={t.instructions} maxLength={600} multiline style={s.input}/><View style={s.row}><TextInput value={formSets} onChangeText={setFormSets} placeholder={t.targetSets} keyboardType="number-pad" maxLength={2} style={[s.input,{flex:1,minWidth:90}]}/><TextInput value={formReps} onChangeText={setFormReps} placeholder={t.targetReps} keyboardType="number-pad" maxLength={3} style={[s.input,{flex:1,minWidth:90}]}/></View><TextInput value={formVideo} onChangeText={setFormVideo} placeholder={t.videoUrl} autoCapitalize="none" keyboardType="url" maxLength={300} style={s.input}/><Pressable onPress={()=>setFormApproved(v=>!v)} style={s.row}><Text style={{fontSize:22,color:formApproved?'#176653':'#9a5a40'}}>{formApproved?'☑':'□'}</Text><Text style={[s.bodySmall,{flex:1}]}>{t.approvalCheck}</Text></Pressable><Btn onPress={saveCustomExercise}>{t.saveExercise}</Btn></View><Text style={s.urgent}>{t.reps} {t.stop}</Text><Btn onPress={start} disabled={!plan.length}>{t.begin}</Btn></>}
    {tab===2&&<>{active?<><Text style={s.eyebrow}>{t.running}</Text><Text style={s.hero}>{t.timer}</Text><Text style={s.timer}>{elapsedText}</Text><Text style={s.body}>{t.elapsed}: {Math.floor(elapsed/60)} {t.minutes}</Text><Text style={s.section}>{t.exercise}</Text><Text style={s.cardTitle}>{current?.title[lang]||t.none}</Text><Demo label={t.demo}/><Text style={s.body}>{current?.description[lang]||t.placeholder}</Text><Text style={s.body}>{t.sets}: {sets}</Text><Btn onPress={()=>{setSets(v=>v+1);speak(t.setDone)}}>{t.setDone}</Btn><Text style={s.bodySmall}>{t.cameraSession}</Text><Btn secondary onPress={()=>setTab(3)}>{t.camera}</Btn><Text style={s.bodySmall}>{t.sessionCapture}: {poseSamples.current.length}</Text><Btn secondary onPress={listen}>{listening?t.voiceListening:t.voiceListen}</Btn><Text style={s.muted}>{t.voiceHelp} {heard}</Text><View style={s.row}>{plan.map(id=>{const e=library.find(x=>x.id===id);return e?<Pressable key={id} style={[s.chip,id===selected&&s.chipActive]} onPress={()=>setSelected(id)}><Text style={[s.chipText,id===selected&&s.chipTextActive]}>{e.title[lang]}</Text></Pressable>:null})}</View><Text style={s.urgent}>{t.painWarning}</Text><Btn onPress={finish} disabled={sessionSaving}>{sessionSaving?t.savingSession:t.finish}</Btn>
  <Btn secondary disabled={sessionSaving} onPress={()=>Alert.alert(t.cancel,t.cancelConfirm,[{text:t.no,style:'cancel'},{text:t.yes,style:'destructive',onPress:async()=>{
-   try{await storeRef.current.update({draftSession:null});setActive(false);setStartedAt(null);setCameraOn(false);poseSamples.current=[]}
+   try{await storeRef.current.update({draftSession:null});setActive(false);setStartedAt(null);setCameraOn(false);poseSamples.current=[];sessionSaveItemRef.current=null}
    catch(e){Alert.alert(t.storageErrorTitle,t.saveFailed)}
   }}])}>{t.cancel}</Btn></>:<><Text style={s.hero}>{t.timer}</Text><Text style={s.body}>{t.choose}</Text><Btn onPress={start} disabled={!plan.length}>{t.begin}</Btn><Text style={s.section}>{phase==='before'?t.before:t.after}</Text><Text style={s.body}>{t.symptom}</Text><View style={s.row}>{Array.from({length:11},(_,i)=><Pressable key={i} onPress={()=>setSymptom(i)} style={[s.score,symptom===i&&s.chipActive]}><Text style={[s.chipText,symptom===i&&s.chipTextActive]}>{i}</Text></Pressable>)}</View><TextInput value={note} onChangeText={setNote} placeholder={t.notes} maxLength={160} style={s.input} multiline/><Btn onPress={saveCheckin}>{t.save}</Btn><Text style={s.muted}>{t.painWarning}</Text></>}</>}
    {tab===3&&<><Text style={s.hero}>{t.camera}</Text><Text style={s.body}>{t.cameraBody}</Text>
