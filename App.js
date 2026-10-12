@@ -1,16 +1,20 @@
 import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react';
-import { SafeAreaView, ScrollView, View, Text, Pressable, StyleSheet, Alert, Platform, TextInput, Share, Linking, Switch } from 'react-native';
+import { SafeAreaView, ScrollView, View, Text, Pressable, StyleSheet, Alert, Platform, TextInput, Share, Linking, Switch, useWindowDimensions } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { CameraView, useCameraPermissions } from 'expo-camera';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
 import NetInfo from '@react-native-community/netinfo';
-import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
+import { Camera, useCameraDevice, useCameraDevices, useCameraPermission } from 'react-native-vision-camera';
 import { usePoseDetection, RunningMode, Delegate } from 'react-native-mediapipe-posedetection';
 import { encode } from 'base-64';
 import * as Speech from 'expo-speech';
 import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-speech-recognition';
 import { VideoView, useVideoPlayer } from 'expo-video';
+import * as ScreenOrientation from 'expo-screen-orientation';
+import sessionStoreHelpers from './sessionStore';
+import cameraHelpers from './cameraControls';
+const {createSessionStore,cleanCameraPrefs}=sessionStoreHelpers;
+const {LENSES,availableLenses,clampZoom,nextCameraPrefs}=cameraHelpers;
 
 const STORE='spinecare.local.v1';
 const C={
@@ -27,6 +31,22 @@ Object.assign(C.ro,{
 const BONES=[[0,11],[0,12],[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28]];
 const POSE_INDICES=[0,7,8,11,12,13,14,15,16,23,24,25,26,27,28];
 const CAPTURE_LIMIT=180; // at most three minutes at one sample/second
+const LENS_LABELS={
+ auto:{en:'Automatic lens',ro:'Obiectiv automat'},
+ 'wide-angle-camera':{en:'Wide',ro:'Standard'},
+ 'ultra-wide-angle-camera':{en:'Ultra-wide',ro:'Ultra-larg'},
+ 'telephoto-camera':{en:'Telephoto',ro:'Teleobiectiv'}
+};
+Object.assign(C.en,{
+ orientation:'Screen orientation',portrait:'Portrait',landscape:'Landscape',orientationNote:'Screen rotation and preview layout adapt to the device. Some orientation modes may not be available.',orientationFailed:'Cannot switch orientation on this device.',
+ cameraFacing:'Camera',frontCamera:'Front (selfie)',backCamera:'Rear',cameraLens:'Camera lens',cameraZoom:'Zoom',zoomInfo:'Lenses and zoom depend on your phone hardware. Keep the entire target region visible.',
+ loadingSessions:'Loading saved sessions…',storageUnavailable:'Could not load saved sessions. Restart the app; existing data has not been erased.',saveFailed:'Could not save to local storage. Try again; the current session remains open.',savingSession:'Saving session…',resumeSession:'Resume interrupted session',discardDraft:'Discard unfinished session',cancelConfirm:'Discard this unsaved session and its collected sensor samples?',reviewSaved:'Session saved. Review details and captured landmarks below.',savedNoTrace:'Session saved without pose samples. Enable the camera during a session to capture a trace.',sessionDetails:'Saved session details',sessionExercises:'Exercise IDs',storageErrorTitle:'Save error',sessionRecovered:'You can resume your last unfinished session.'
+});
+Object.assign(C.ro,{
+ orientation:'Orientarea ecranului',portrait:'Portret',landscape:'Peisaj',orientationNote:'Rotirea ecranului și încadrarea se adaptează dispozitivului. Unele orientări pot fi indisponibile.',orientationFailed:'Nu se poate schimba orientarea pe acest dispozitiv.',
+ cameraFacing:'Cameră',frontCamera:'Față (selfie)',backCamera:'Spate',cameraLens:'Obiectivul camerei',cameraZoom:'Zoom',zoomInfo:'Obiectivele și nivelul de zoom depind de telefon. Încadrează întreaga zonă vizată.',
+ loadingSessions:'Se încarcă sesiunile salvate…',storageUnavailable:'Sesiunile salvate nu au putut fi încărcate. Repornește aplicația; datele existente nu au fost șterse.',saveFailed:'Nu s-a putut salva local. Încearcă din nou; sesiunea curentă rămâne deschisă.',savingSession:'Se salvează sesiunea…',resumeSession:'Reia sesiunea întreruptă',discardDraft:'Șterge sesiunea neterminată',cancelConfirm:'Ștergi această sesiune nesalvată și eșantioanele de senzori colectate?',reviewSaved:'Sesiune salvată. Mai jos poți verifica detaliile și punctele de poziție capturate.',savedNoTrace:'Sesiune salvată fără puncte de poziție. Activează camera în timpul sesiunii pentru a captura un traseu.',sessionDetails:'Detaliile sesiunii salvate',sessionExercises:'ID-uri exerciții',storageErrorTitle:'Eroare la salvare',sessionRecovered:'Poți relua ultima sesiune neterminată.'
+});
 const REGIONS=[
  {id:'all',en:'All regions',ro:'Toate zonele'},
  {id:'neck',en:'Neck only',ro:'Doar gât'},
@@ -92,9 +112,37 @@ const EX=[
 ];
 function Btn({children,onPress,secondary,disabled}){return <Pressable accessibilityRole="button" disabled={disabled} onPress={onPress} style={[s.btn,secondary&&s.btnAlt,disabled&&{opacity:.45}]}><Text style={[s.btnText,secondary&&s.btnAltText]}>{children}</Text></Pressable>}
 function Demo({label}){const [phase,setPhase]=useState(0);useEffect(()=>{const id=setInterval(()=>setPhase(p=>(p+1)%3),700);return()=>clearInterval(id)},[]);return <View accessibilityLabel={label} style={s.demo}><View style={s.head}/><View style={[s.torso,{transform:[{rotate:['-3deg','0deg','3deg'][phase]}]}]}/><View style={[s.arm,{left:'27%',transform:[{rotate:['-24deg','-12deg','-24deg'][phase]}]}]}/><View style={[s.arm,{right:'27%',transform:[{rotate:['24deg','12deg','24deg'][phase]}]}]}/><View style={[s.leg,{left:'43%'}]}/><View style={[s.leg,{right:'43%'}]}/><Text style={s.demoLabel}>↻ {label}</Text></View>}
-function PoseCamera({view,settings,onResults,onError}){const device=useCameraDevice(view===2?'back':'front');const resultRef=useRef(onResults);const errorRef=useRef(onError);resultRef.current=onResults;errorRef.current=onError;const stableResults=useCallback(result=>resultRef.current(result),[]);const stableError=useCallback(error=>errorRef.current(error),[]);const solution=usePoseDetection({onResults:stableResults,onError:stableError},RunningMode.LIVE_STREAM,'pose_landmarker_lite.task',{numPoses:1,minPoseDetectionConfidence:0.5,minPosePresenceConfidence:0.5,minTrackingConfidence:0.5,delegate:settings.delegate==='CPU'?Delegate.CPU:Delegate.GPU,fpsMode:Number(settings.fps)||10});useEffect(()=>{if(device)solution.cameraDeviceChangeHandler(device)},[device,solution.cameraDeviceChangeHandler]);if(!device)return <View style={{flex:1,alignItems:'center',justifyContent:'center'}}><Text>Camera…</Text></View>;return <Camera style={{flex:1}} device={device} isActive={true} photo={true} frameProcessor={solution.frameProcessor} onLayout={solution.cameraViewLayoutChangeHandler} onOutputOrientationChanged={solution.cameraOrientationChangedHandler}/>}
+function PoseCamera({prefs,settings,onResults,onError}){
+ const device=useCameraDevice(prefs.facing,prefs.lens==='auto'?undefined:{physicalDevices:[prefs.lens]});
+ const resultRef=useRef(onResults),errorRef=useRef(onError);
+ resultRef.current=onResults;errorRef.current=onError;
+ const stableResults=useCallback(result=>resultRef.current(result),[]);
+ const stableError=useCallback(error=>errorRef.current(error),[]);
+ const solution=usePoseDetection({onResults:stableResults,onError:stableError},
+  RunningMode.LIVE_STREAM,'pose_landmarker_lite.task',{numPoses:1,
+   minPoseDetectionConfidence:0.5,minPosePresenceConfidence:0.5,minTrackingConfidence:0.5,
+   delegate:settings.delegate==='CPU'?Delegate.CPU:Delegate.GPU,
+   fpsMode:Number(settings.fps)||10});
+ useEffect(()=>{if(device)solution.cameraDeviceChangeHandler(device)},[device,solution.cameraDeviceChangeHandler]);
+ if(!device)return <View style={{flex:1,alignItems:'center',justifyContent:'center'}}><Text>Camera unavailable</Text></View>;
+ return <Camera style={{flex:1}} device={device} isActive={true} photo={true}
+  zoom={clampZoom(prefs.zoom,device)}
+  frameProcessor={settings.localPose?solution.frameProcessor:undefined}
+  onLayout={solution.cameraViewLayoutChangeHandler}
+  onOutputOrientationChanged={solution.cameraOrientationChangedHandler}/>;
+}
 export default function App(){
- const [lang,setLang]=useState('en'),[tab,setTab]=useState(0),[plan,setPlan]=useState([]),[selected,setSelected]=useState(null),[view,setView]=useState(0),[cameraOn,setCameraOn]=useState(false),[permission,requestPermission]=useCameraPermissions();
+ const [lang,setLang]=useState('en'),[tab,setTab]=useState(0),[plan,setPlan]=useState([]),[selected,setSelected]=useState(null),[view,setView]=useState(0),[cameraOn,setCameraOn]=useState(false);
+  const [cameraPrefs,setCameraPrefs]=useState(cleanCameraPrefs(null));
+  const [storageReady,setStorageReady]=useState(false),[storageError,setStorageError]=useState('');
+  const [sessionSaving,setSessionSaving]=useState(false),[pendingDraft,setPendingDraft]=useState(null);
+  const savingSessionRef=useRef(false),storeRef=useRef(null);
+  if(!storeRef.current)storeRef.current=createSessionStore(AsyncStorage,STORE);
+  const allCameraDevices=useCameraDevices();
+  const {width:screenWidth,height:screenHeight}=useWindowDimensions();
+  const wideLayout=screenWidth>screenHeight;
+  const previewHeight=wideLayout?Math.max(210,Math.min(screenHeight*0.64,380)):300;
+  const selectableLenses=availableLenses(allCameraDevices,cameraPrefs.facing);
  const {hasPermission:hasVisionPermission,requestPermission:requestVisionPermission}=useCameraPermission();
  const [history,setHistory]=useState([]),[checkins,setCheckins]=useState([]),[customExercises,setCustomExercises]=useState([]),[active,setActive]=useState(false),[startedAt,setStartedAt]=useState(null),[now,setNow]=useState(Date.now()),[sets,setSets]=useState(0),[symptom,setSymptom]=useState(0),[note,setNote]=useState(''),[phase,setPhase]=useState('before');
  const [settings,setSettings]=useState({voiceGuidance:true,localPose:true,delegate:'GPU',fps:10,remoteEnabled:false,remoteHost:'',remotePath:'/analyze/pose',remoteUser:'',shareLandmarks:false,allowInsecureLan:false});
@@ -120,10 +168,38 @@ export default function App(){
  const [formName,setFormName]=useState(''),[formInstructions,setFormInstructions]=useState(''),[formSets,setFormSets]=useState(''),[formReps,setFormReps]=useState(''),[formVideo,setFormVideo]=useState(''),[formApproved,setFormApproved]=useState(false);
  const t=C[lang];
  useEffect(()=>{SecureStore.getItemAsync('spinecare.remote.password').then(v=>setRemotePassword(v||'')).catch(()=>{});},[]);
- useEffect(()=>{(async()=>{try{const raw=await AsyncStorage.getItem(STORE);if(raw){const d=JSON.parse(raw);setPlan(d.plan||[]);setHistory(d.history||[]);setCheckins(d.checkins||[]);setCustomExercises(d.customExercises||[]);if(d.lang==='en'||d.lang==='ro')setLang(d.lang);if(d.settings)setSettings(v=>({...v,...d.settings}));}}catch(e){}})()},[]);
- const persist=async(p=plan,h=history,c=checkins,x=customExercises,st=settings)=>{try{await AsyncStorage.setItem(STORE,JSON.stringify({plan:p,history:h,checkins:c,customExercises:x,settings:st,lang}))}catch(e){Alert.alert('Storage','Could not save data on this device.')}};
+ useEffect(()=>{let mounted=true;
+   storeRef.current.load().then(d=>{if(!mounted)return;
+     setPlan(d.plan);setHistory(d.history);setCheckins(d.checkins);setCustomExercises(d.customExercises);
+     setLang(d.lang);setSettings(v=>({...v,...d.settings}));setCameraPrefs(d.cameraPrefs);
+     setPendingDraft(d.draftSession);setStorageReady(true);
+   }).catch(e=>{if(mounted)setStorageError(String(e.message||e))});
+   return()=>{mounted=false};
+  },[]);
+  useEffect(()=>{if(!storageReady||Platform.OS==='web')return;
+   const lock=cameraPrefs.orientation==='landscape'
+    ?ScreenOrientation.OrientationLock.LANDSCAPE:ScreenOrientation.OrientationLock.PORTRAIT_UP;
+   ScreenOrientation.lockAsync(lock).catch(()=>Alert.alert(t.orientation,t.orientationFailed));
+  },[storageReady,cameraPrefs.orientation]);
+ const persist=(p,h,c,x,st)=>{
+   const patch={};
+   if(p!==undefined)patch.plan=p;if(h!==undefined)patch.history=h;
+   if(c!==undefined)patch.checkins=c;if(x!==undefined)patch.customExercises=x;
+   if(st!==undefined)patch.settings=st;
+   return storeRef.current.update(patch).catch(e=>Alert.alert(t.storageErrorTitle,t.saveFailed+' '+String(e.message||e)));
+  };
+  const updateCameraPrefs=(patch)=>{
+   const next=nextCameraPrefs(cameraPrefs,patch,allCameraDevices);
+   setCameraPrefs(next);
+   storeRef.current.update({cameraPrefs:next}).catch(e=>Alert.alert(t.storageErrorTitle,t.saveFailed+' '+String(e.message||e)));
+  };
+  const applyOrientation=mode=>updateCameraPrefs({orientation:mode});
  const updateSetting=(key,value)=>setSettings(v=>({...v,[key]:value}));
- const saveSettings=async()=>{try{await AsyncStorage.setItem(STORE,JSON.stringify({plan,history,checkins,customExercises,settings,lang}));await SecureStore.setItemAsync('spinecare.remote.password',remotePassword);Alert.alert(t.settingsTitle,t.settingsSaved)}catch(e){Alert.alert('Settings','Could not securely save settings.')}};
+ const saveSettings=async()=>{try{
+    await storeRef.current.update({settings,lang});
+    await SecureStore.setItemAsync('spinecare.remote.password',remotePassword);
+    Alert.alert(t.settingsTitle,t.settingsSaved);
+   }catch(e){Alert.alert(t.storageErrorTitle,t.saveFailed+' '+String(e.message||e))}};
  const normalizeHost=()=>settings.remoteHost.trim().replace(/\/$/,'');
  const isPrivateLanHost=host=>{try{const h=new URL(host).hostname.toLowerCase().replace(/^\[|\]$/g,'');return h==='localhost'||h.endsWith('.local')||/^10\./.test(h)||/^192\.168\./.test(h)||/^172\.(1[6-9]|2\d|3[01])\./.test(h)||/^169\.254\./.test(h)||h==='::1'||/^f[cd][0-9a-f:]*$/i.test(h)||/^fe[89ab][0-9a-f:]*$/i.test(h)}catch(e){return false}};
  const authHeaders=()=>settings.remoteUser&&remotePassword?{Authorization:'Basic '+encode(settings.remoteUser+':'+remotePassword)}:{};
@@ -139,13 +215,13 @@ export default function App(){
  const library=[...EX,...customExercises];
  const filteredLibrary=library.filter(e=>region==='all'||(e.region||'full')===region||(region==='upper'&&['neck','shoulders','upper'].includes(e.region)));
  const currentGuide=GUIDES.find(g=>g.id===guideId)||GUIDES[0];
- const cameraReady=cameraOn&&Platform.OS!=='web'&&(settings.localPose?hasVisionPermission:permission?.granted);
- const toggleCamera=async()=>{if(cameraOn){setCameraOn(false);setLandmarksUi([]);return}if(settings.localPose&&!hasVisionPermission){const p=await requestVisionPermission();if(!p)return Alert.alert(t.camera,t.cameraNote)}else if(!settings.localPose&&!permission?.granted){const p=await requestPermission();if(!p.granted)return Alert.alert(t.camera,t.cameraNote)}setCameraOn(true)};
- const cameraPanel=<>{cameraReady?<View style={s.camera}>{settings.localPose?<PoseCamera view={view} settings={settings} onResults={onPoseResults} onError={onPoseError}/>:<CameraView style={{flex:1}} facing={view===2?'back':'front'}/>}<PoseOverlay landmarks={settings.localPose?landmarksUi:[]} caption={t.liveOverlay}/><Text style={s.cameraOverlay}>{t.views[view]}</Text></View>:<View style={s.frame}><View style={s.frameHead}/><View style={s.frameTorso}/><View style={s.frameLeg}/><Text style={s.muted}>{t.views[view]} · {t.cameraNote}</Text></View>}{Platform.OS==='web'?<Text style={s.body}>{t.noCamera}</Text>:<Btn onPress={toggleCamera}>{cameraOn?t.hide:t.start}</Btn>}<Text style={s.muted}>{t.cameraNote}</Text>{poseSummary?<Text style={s.bodySmall}>{poseSummary}</Text>:null}</>;
+ const cameraReady=cameraOn&&Platform.OS!=='web'&&hasVisionPermission;
+ const toggleCamera=async()=>{if(cameraOn){setCameraOn(false);setLandmarksUi([]);return}if(!hasVisionPermission){const p=await requestVisionPermission();if(!p)return Alert.alert(t.camera,t.cameraNote)}setCameraOn(true)};
+ const cameraPanel=<>{cameraReady?<View style={[s.camera,{height:previewHeight}]}><PoseCamera prefs={cameraPrefs} settings={settings} onResults={onPoseResults} onError={onPoseError}/><PoseOverlay landmarks={settings.localPose?landmarksUi:[]} caption={settings.localPose?t.liveOverlay:''}/><Text style={s.cameraOverlay}>{t.views[view]} · {cameraPrefs.facing==='front'?t.frontCamera:t.backCamera} · {cameraPrefs.zoom.toFixed(2)}×</Text></View>:<View style={s.frame}><View style={s.frameHead}/><View style={s.frameTorso}/><View style={s.frameLeg}/><Text style={s.muted}>{t.views[view]} · {t.cameraNote}</Text></View>}{Platform.OS==='web'?<Text style={s.body}>{t.noCamera}</Text>:<Btn onPress={toggleCamera}>{cameraOn?t.hide:t.start}</Btn>}<Text style={s.muted}>{t.cameraNote}</Text>{poseSummary?<Text style={s.bodySmall}>{poseSummary}</Text>:null}</>;
 
  const current=library.find(e=>e.id===selected);
- const saveCustomExercise=()=>{if(!formName.trim()||!formInstructions.trim()||!formApproved){Alert.alert(t.approved,t.customEmpty);return}const ex={id:'custom-'+Date.now(),custom:true,approved:true,title:{en:formName.trim(),ro:formName.trim()},description:{en:formInstructions.trim(),ro:formInstructions.trim()},setsTarget:Math.max(0,Math.min(99,parseInt(formSets,10)||0)),repsTarget:Math.max(0,Math.min(999,parseInt(formReps,10)||0)),videoUrl:formVideo.trim(),region:region==='all'?'upper':region};const list=[...customExercises,ex];setCustomExercises(list);persist(plan,history,checkins,list);setFormName('');setFormInstructions('');setFormSets('');setFormReps('');setFormVideo('');setFormApproved(false);Alert.alert(t.saved,t.progressBody)};
- const removeCustomExercise=ex=>{const list=customExercises.filter(x=>x.id!==ex.id);const p=plan.filter(id=>id!==ex.id);setCustomExercises(list);setPlan(p);if(selected===ex.id)setSelected(p[0]||null);persist(p,history,checkins,list)};
+ const saveCustomExercise=()=>{if(!formName.trim()||!formInstructions.trim()||!formApproved){Alert.alert(t.approved,t.customEmpty);return}const ex={id:'custom-'+Date.now(),custom:true,approved:true,title:{en:formName.trim(),ro:formName.trim()},description:{en:formInstructions.trim(),ro:formInstructions.trim()},setsTarget:Math.max(0,Math.min(99,parseInt(formSets,10)||0)),repsTarget:Math.max(0,Math.min(999,parseInt(formReps,10)||0)),videoUrl:formVideo.trim(),region:region==='all'?'upper':region};const list=[...customExercises,ex];setCustomExercises(list);persist(undefined,undefined,undefined,list);setFormName('');setFormInstructions('');setFormSets('');setFormReps('');setFormVideo('');setFormApproved(false);Alert.alert(t.saved,t.progressBody)};
+ const removeCustomExercise=ex=>{const list=customExercises.filter(x=>x.id!==ex.id);const p=plan.filter(id=>id!==ex.id);setCustomExercises(list);setPlan(p);if(selected===ex.id)setSelected(p[0]||null);persist(p,undefined,undefined,list)};
  const exportData=async()=>{const esc=v=>'"'+String(v??'').replace(/"/g,'""')+'"';const rows=[['type','date','duration_seconds','sets_completed','symptom_score','phase','note'],...history.map(h=>['session',h.date,h.durationSeconds,h.sets,'','','']),...checkins.map(x=>['checkin',x.date,'','',''+x.score,x.phase,x.note])];const csv=rows.map(row=>row.map(esc).join(',')).join('\n');try{await Share.share({title:'SpineCare local export',message:csv})}catch(e){Alert.alert('Export','Unable to open the share sheet on this device.')}};
  const togglePlan=e=>{const p=plan.includes(e.id)?plan.filter(id=>id!==e.id):[...plan,e.id];setPlan(p);persist(p)};
  const start=()=>{if(!plan.length){Alert.alert('SpineCare',t.choose);setTab(1);return}setSelected(plan[0]);setSets(0);poseSamples.current=[];lastCapture.current=0;setStartedAt(Date.now());setNow(Date.now());setActive(true);setTab(2);setPhase('before');speak(t.voiceStart)};
