@@ -2,7 +2,7 @@
   "expo": {
     "name": "SpineCare",
     "slug": "spinecare-gpt6",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "orientation": "default",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -18,7 +18,7 @@
         "CFBundleDisplayName": "SpineCare GPT-6"
       },
       "bundleIdentifier": "com.spinecare.mobile.gpt6",
-      "buildNumber": "2",
+      "buildNumber": "3",
       "requireFullScreen": true
     },
     "android": {
@@ -29,7 +29,7 @@
         "RECORD_AUDIO"
       ],
       "package": "com.spinecare.mobile.gpt6",
-      "versionCode": 2,
+      "versionCode": 3,
       "usesCleartextTraffic": true
     },
     "plugins": [

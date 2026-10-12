@@ -13,14 +13,14 @@ This GPT-6 build is intentionally distinct from other SpineCare variants:
 | Installed launcher label | `SpineCare GPT-6` |
 | Expo slug | `spinecare-gpt6` |
 | npm project name | `spinecare-mobile-gpt6` |
-| App version | `0.2.0` (Android versionCode 2 / iOS buildNumber 2) |
+| App version | `0.3.0` (Android versionCode 3 / iOS buildNumber 3) |
 
 The native iOS Xcode target/scheme remains `SpineCare`; the home-screen label and bundle ID are distinct. CI verifies the generated native identifiers and packaged IPA/APK IDs and names the downloadable artifacts `SpineCare-GPT6-...`.
 
 **Installation warning:** changing identifiers makes a new app, not an in-place update of `com.spinecare.mobile`. Prior local plans, session traces, and check-ins remain in the old app's isolated local storage and do not automatically move to this variant. The two apps can coexist. For installing the unsigned iOS archive on hardware, the signing profile/certificate must permit the new bundle ID.
 
 
-## Camera orientation, lens, zoom and saved-session review
+## Camera orientation, lens, zoom and saved-session review (v0.3.0)
 
 - In **Camera**, select **Portrait** or **Landscape**; the selection is persisted locally and restored on next launch. The same orientation control also appears in **Settings**. iOS full-screen mode enables runtime orientation control on iPad; actual rotation can still be restricted by OS/window mode.
 - Select **Front (selfie)** or **Rear**, then choose among detected hardware camera lenses (Automatic, Ultra-wide, Wide, Telephoto where available). Use 0.5×/1×/2×/3×/4× or ±0.25× zoom. Unsupported lenses are not listed; actual zoom is clamped to the device's supported range. Front/back selection is independent of the exercise-view guide.

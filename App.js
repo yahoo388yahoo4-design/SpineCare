@@ -143,6 +143,10 @@ export default function App(){
   const wideLayout=screenWidth>screenHeight;
   const previewHeight=wideLayout?Math.max(210,Math.min(screenHeight*0.64,380)):300;
   const selectableLenses=availableLenses(allCameraDevices,cameraPrefs.facing);
+  const selectedCameraDevice=useCameraDevice(cameraPrefs.facing,
+    cameraPrefs.lens==='auto'?undefined:{physicalDevices:[cameraPrefs.lens]});
+  const shownZoom=clampZoom(cameraPrefs.zoom,selectedCameraDevice);
+  const zoomOptions=[0.5,1,2,3,4].filter(v=>v>=(selectedCameraDevice?.minZoom??1)&&v<=Math.min(8,selectedCameraDevice?.maxZoom??8));
  const {hasPermission:hasVisionPermission,requestPermission:requestVisionPermission}=useCameraPermission();
  const [history,setHistory]=useState([]),[checkins,setCheckins]=useState([]),[customExercises,setCustomExercises]=useState([]),[active,setActive]=useState(false),[startedAt,setStartedAt]=useState(null),[now,setNow]=useState(Date.now()),[sets,setSets]=useState(0),[symptom,setSymptom]=useState(0),[note,setNote]=useState(''),[phase,setPhase]=useState('before');
  const [settings,setSettings]=useState({voiceGuidance:true,localPose:true,delegate:'GPU',fps:10,remoteEnabled:false,remoteHost:'',remotePath:'/analyze/pose',remoteUser:'',shareLandmarks:false,allowInsecureLan:false});
@@ -190,6 +194,7 @@ export default function App(){
   };
   const updateCameraPrefs=(patch)=>{
    const next=nextCameraPrefs(cameraPrefs,patch,allCameraDevices);
+   if(patch.zoom!==undefined)next.zoom=clampZoom(next.zoom,selectedCameraDevice);
    setCameraPrefs(next);
    storeRef.current.update({cameraPrefs:next}).catch(e=>Alert.alert(t.storageErrorTitle,t.saveFailed+' '+String(e.message||e)));
   };
@@ -217,7 +222,7 @@ export default function App(){
  const currentGuide=GUIDES.find(g=>g.id===guideId)||GUIDES[0];
  const cameraReady=cameraOn&&Platform.OS!=='web'&&hasVisionPermission;
  const toggleCamera=async()=>{if(cameraOn){setCameraOn(false);setLandmarksUi([]);return}if(!hasVisionPermission){const p=await requestVisionPermission();if(!p)return Alert.alert(t.camera,t.cameraNote)}setCameraOn(true)};
- const cameraPanel=<>{cameraReady?<View style={[s.camera,{height:previewHeight}]}><PoseCamera prefs={cameraPrefs} settings={settings} onResults={onPoseResults} onError={onPoseError}/><PoseOverlay landmarks={settings.localPose?landmarksUi:[]} caption={settings.localPose?t.liveOverlay:''}/><Text style={s.cameraOverlay}>{t.views[view]} · {cameraPrefs.facing==='front'?t.frontCamera:t.backCamera} · {cameraPrefs.zoom.toFixed(2)}×</Text></View>:<View style={s.frame}><View style={s.frameHead}/><View style={s.frameTorso}/><View style={s.frameLeg}/><Text style={s.muted}>{t.views[view]} · {t.cameraNote}</Text></View>}{Platform.OS==='web'?<Text style={s.body}>{t.noCamera}</Text>:<Btn onPress={toggleCamera}>{cameraOn?t.hide:t.start}</Btn>}<Text style={s.muted}>{t.cameraNote}</Text>{poseSummary?<Text style={s.bodySmall}>{poseSummary}</Text>:null}</>;
+ const cameraPanel=<>{cameraReady?<View style={[s.camera,{height:previewHeight}]}><PoseCamera prefs={cameraPrefs} settings={settings} onResults={onPoseResults} onError={onPoseError}/><PoseOverlay landmarks={settings.localPose?landmarksUi:[]} caption={settings.localPose?t.liveOverlay:''}/><Text style={s.cameraOverlay}>{t.views[view]} · {cameraPrefs.facing==='front'?t.frontCamera:t.backCamera} · {shownZoom.toFixed(2)}×</Text></View>:<View style={s.frame}><View style={s.frameHead}/><View style={s.frameTorso}/><View style={s.frameLeg}/><Text style={s.muted}>{t.views[view]} · {t.cameraNote}</Text></View>}{Platform.OS==='web'?<Text style={s.body}>{t.noCamera}</Text>:<Btn onPress={toggleCamera}>{cameraOn?t.hide:t.start}</Btn>}<Text style={s.muted}>{t.cameraNote}</Text>{poseSummary?<Text style={s.bodySmall}>{poseSummary}</Text>:null}</>;
 
  const current=library.find(e=>e.id===selected);
  const saveCustomExercise=()=>{if(!formName.trim()||!formInstructions.trim()||!formApproved){Alert.alert(t.approved,t.customEmpty);return}const ex={id:'custom-'+Date.now(),custom:true,approved:true,title:{en:formName.trim(),ro:formName.trim()},description:{en:formInstructions.trim(),ro:formInstructions.trim()},setsTarget:Math.max(0,Math.min(99,parseInt(formSets,10)||0)),repsTarget:Math.max(0,Math.min(999,parseInt(formReps,10)||0)),videoUrl:formVideo.trim(),region:region==='all'?'upper':region};const list=[...customExercises,ex];setCustomExercises(list);persist(undefined,undefined,undefined,list);setFormName('');setFormInstructions('');setFormSets('');setFormReps('');setFormVideo('');setFormApproved(false);Alert.alert(t.saved,t.progressBody)};
@@ -304,10 +309,10 @@ export default function App(){
    <View style={s.row}>{['front','back'].map(facing=><Pressable key={facing} onPress={()=>updateCameraPrefs({facing})} style={[s.chip,cameraPrefs.facing===facing&&s.chipActive]}><Text style={[s.chipText,cameraPrefs.facing===facing&&s.chipTextActive]}>{facing==='front'?t.frontCamera:t.backCamera}</Text></Pressable>)}</View>
    <Text style={s.cardTitle}>{t.cameraLens}</Text>
    <View style={s.row}>{LENSES.filter(lens=>selectableLenses.includes(lens)).map(lens=><Pressable key={lens} onPress={()=>updateCameraPrefs({lens,zoom:1})} style={[s.chip,cameraPrefs.lens===lens&&s.chipActive]}><Text style={[s.chipText,cameraPrefs.lens===lens&&s.chipTextActive]}>{LENS_LABELS[lens][lang]}</Text></Pressable>)}</View>
-   <Text style={s.cardTitle}>{t.cameraZoom}: {cameraPrefs.zoom.toFixed(2)}×</Text>
+   <Text style={s.cardTitle}>{t.cameraZoom}: {shownZoom.toFixed(2)}×</Text>
    <View style={s.row}>
     <Btn secondary onPress={()=>updateCameraPrefs({zoom:Math.max(.5,Math.round((cameraPrefs.zoom-.25)*4)/4)})}>−</Btn>
-    {[0.5,1,2,3,4].map(v=><Pressable key={v} onPress={()=>updateCameraPrefs({zoom:v})} style={[s.chip,Math.abs(cameraPrefs.zoom-v)<.001&&s.chipActive]}><Text style={[s.chipText,Math.abs(cameraPrefs.zoom-v)<.001&&s.chipTextActive]}>{v}×</Text></Pressable>)}
+    {zoomOptions.map(v=><Pressable key={v} onPress={()=>updateCameraPrefs({zoom:v})} style={[s.chip,Math.abs(cameraPrefs.zoom-v)<.001&&s.chipActive]}><Text style={[s.chipText,Math.abs(cameraPrefs.zoom-v)<.001&&s.chipTextActive]}>{v}×</Text></Pressable>)}
     <Btn secondary onPress={()=>updateCameraPrefs({zoom:Math.min(8,Math.round((cameraPrefs.zoom+.25)*4)/4)})}>+</Btn>
    </View>
    <Text style={s.bodySmall}>{t.orientationNote} {t.zoomInfo}</Text>

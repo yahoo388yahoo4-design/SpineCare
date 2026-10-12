@@ -66,8 +66,8 @@ jobs:
         run: |
           mkdir -p build/ipa/Payload
           ditto build/SpineCare-unsigned.xcarchive/Products/Applications/SpineCare.app build/ipa/Payload/SpineCare.app
-          (cd build/ipa && zip -qry ../SpineCare-GPT6-v0.2.0-unsigned.ipa Payload)
-          ditto -c -k --sequesterRsrc --keepParent build/SpineCare-unsigned.xcarchive build/SpineCare-GPT6-v0.2.0-unsigned.xcarchive.zip
+          (cd build/ipa && zip -qry ../SpineCare-GPT6-v0.3.0-unsigned.ipa Payload)
+          ditto -c -k --sequesterRsrc --keepParent build/SpineCare-unsigned.xcarchive build/SpineCare-GPT6-v0.3.0-unsigned.xcarchive.zip
       - name: Upload Xcode archive diagnostic log
         if: failure()
         uses: actions/upload-artifact@v4
@@ -89,8 +89,8 @@ jobs:
         with:
           name: spinecare-gpt6-ios-unsigned
           path: |
-            build/SpineCare-GPT6-v0.2.0-unsigned.ipa
-            build/SpineCare-GPT6-v0.2.0-unsigned.xcarchive.zip
+            build/SpineCare-GPT6-v0.3.0-unsigned.ipa
+            build/SpineCare-GPT6-v0.3.0-unsigned.xcarchive.zip
             xcodebuild-archive.log
           if-no-files-found: error
           retention-days: 30

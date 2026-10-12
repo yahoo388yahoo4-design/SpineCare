@@ -15,8 +15,8 @@ assert.equal(config.slug, 'spinecare-gpt6');
 assert.equal(config.orientation, 'default', 'App config must allow landscape and portrait');
 assert.equal(config.ios.requireFullScreen, true, 'iPad orientation lock requires full screen');
 assert(config.plugins.some(p=>Array.isArray(p)&&p[0]==='expo-screen-orientation'));
-assert.equal(config.android.versionCode, 2);
-assert.equal(config.ios.buildNumber, '2');
+assert.equal(config.android.versionCode, 3);
+assert.equal(config.ios.buildNumber, '3');
 assert.equal(packageJson.name, 'spinecare-mobile-gpt6');
 assert(config.plugins.includes('./plugins/withGPT6LauncherName'), 'Missing Android launcher-label plugin');
 if (mode === '--android-native') {
