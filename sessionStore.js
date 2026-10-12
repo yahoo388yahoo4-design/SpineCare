@@ -82,7 +82,7 @@ function createSessionStore(storage,key) {
   function appendSession(session) {
     const valid=normalizeSession(session);
     if (!valid) return Promise.reject(new Error('Invalid session'));
-    return update({history:[valid,...doc.history].slice(0,MAX_HISTORY),draftSession:null});
+    return update({history:[valid,...doc.history.filter(h=>h.id!==valid.id)].slice(0,MAX_HISTORY),draftSession:null});
   }
   function appendCheckin(checkin) {
     if (!isObject(checkin)) return Promise.reject(new Error('Invalid check-in'));
