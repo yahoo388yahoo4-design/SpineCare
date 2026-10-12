@@ -8,7 +8,8 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "postinstall": "node scripts/patch-mediapipe-ios.js"
+    "postinstall": "node scripts/patch-mediapipe-ios.js",
+    "test:sessions": "node --test tests/sessionStore.test.cjs"
   },
   "dependencies": {
     "expo": "~54.0.0",
@@ -25,7 +26,8 @@
     "react-native-worklets-core": "^1.6.2",
     "expo-speech": "~14.0.8",
     "expo-video": "~3.0.16",
-    "expo-speech-recognition": "3.1.3"
+    "expo-speech-recognition": "3.1.3",
+    "expo-screen-orientation": "~9.0.9"
   },
   "devDependencies": {
     "@types/react": "~19.1.10",

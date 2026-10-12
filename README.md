@@ -20,6 +20,16 @@ The native iOS Xcode target/scheme remains `SpineCare`; the home-screen label an
 **Installation warning:** changing identifiers makes a new app, not an in-place update of `com.spinecare.mobile`. Prior local plans, session traces, and check-ins remain in the old app's isolated local storage and do not automatically move to this variant. The two apps can coexist. For installing the unsigned iOS archive on hardware, the signing profile/certificate must permit the new bundle ID.
 
 
+## Camera orientation, lens, zoom and saved-session review
+
+- In **Camera**, select **Portrait** or **Landscape**; the selection is persisted locally and restored on next launch. The same orientation control also appears in **Settings**. iOS full-screen mode enables runtime orientation control on iPad; actual rotation can still be restricted by OS/window mode.
+- Select **Front (selfie)** or **Rear**, then choose among detected hardware camera lenses (Automatic, Ultra-wide, Wide, Telephoto where available). Use 0.5×/1×/2×/3×/4× or ±0.25× zoom. Unsupported lenses are not listed; actual zoom is clamped to the device's supported range. Front/back selection is independent of the exercise-view guide.
+- **Start Session → mark sets → optionally enable local pose camera → Finish**: the app waits for the local save to complete, then opens **Progress** and automatically selects the completed session. Review all 100 most recent sessions, their duration, exercise IDs, sets and pose sample playback with frame navigation. Older sessions without sensor traces still display their details.
+- Active sessions periodically save a draft (every ~5 seconds); after reopening an interrupted session, the Today page offers **Resume interrupted session** or **Discard unfinished session**. A force-close can lose up to approximately five seconds of unsaved tracking samples.
+- The app uses serialized local storage updates for sessions, check-ins, custom exercises, language and camera controls. Save confirmation occurs **only after** AsyncStorage acknowledges the write. Camera footage itself is not recorded; replay shows estimated pose landmarks sampled only while the session and camera were active.
+- Automated regression tests: `npm run test:sessions` (Node built-in test runner) verifies save/reload, concurrent writes, failing storage, legacy trace-free sessions, draft recovery, check-in clearing, and hardware-aware lens/zoom bounds. These are software/storage tests, not proof of physical-device camera accuracy or rehabilitation safety.
+- Android CI uploads the verified release APK before attempting emulator screenshots; emulator boot/render/screenshot failures are reported separately and do not conceal a successful APK build.
+
 ## Implemented in the current app
 
 - Six screens: Today, Plan, Session, Camera, Progress, and Settings.

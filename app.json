@@ -3,7 +3,7 @@
     "name": "SpineCare",
     "slug": "spinecare-gpt6",
     "version": "0.2.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -18,7 +18,8 @@
         "CFBundleDisplayName": "SpineCare GPT-6"
       },
       "bundleIdentifier": "com.spinecare.mobile.gpt6",
-      "buildNumber": "2"
+      "buildNumber": "2",
+      "requireFullScreen": true
     },
     "android": {
       "permissions": [
@@ -59,7 +60,13 @@
           "speechRecognitionPermission": "Allow SpineCare to recognize English or Romanian spoken exercise commands."
         }
       ],
-      "./plugins/withGPT6LauncherName"
+      "./plugins/withGPT6LauncherName",
+      [
+        "expo-screen-orientation",
+        {
+          "initialOrientation": "DEFAULT"
+        }
+      ]
     ]
   }
 }
