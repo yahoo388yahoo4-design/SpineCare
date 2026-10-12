@@ -56,6 +56,19 @@ test('failed write rejects and next queued update can recover persisted snapshot
   const reopened=createSessionStore(adapter,KEY);const d=await reopened.load();
   assert.equal(d.history[0].id,'4');assert.equal(d.lang,'ro');
 });
+
+test('retrying a session with the same ID replaces the earlier pending entry instead of duplicating it',async()=>{
+  let failed=true,raw=null;
+  const backend={getItem:async()=>raw,setItem:async(k,v)=>{if(failed){failed=false;throw Error('temporary failure')}raw=v}};
+  const store=createSessionStore(backend,KEY);await store.load();
+  await assert.rejects(store.appendSession(sample(10)),/temporary failure/);
+  await store.appendSession({...sample(10),sets:4});
+  const loaded=await createSessionStore(backend,KEY).load();
+  assert.equal(loaded.history.length,1);
+  assert.equal(loaded.history[0].id,'10');
+  assert.equal(loaded.history[0].sets,4);
+});
+
 test('saved legacy sessions without traces remain reviewable',async()=>{
   const adapter=mockStorage(JSON.stringify({plan:[],history:[{id:'legacy',date:'2026-10-11T10:00:00Z',durationSeconds:14,sets:1}]}));
   const store=createSessionStore(adapter,KEY);const doc=await store.load();
