@@ -224,14 +224,62 @@ export default function App(){
  const removeCustomExercise=ex=>{const list=customExercises.filter(x=>x.id!==ex.id);const p=plan.filter(id=>id!==ex.id);setCustomExercises(list);setPlan(p);if(selected===ex.id)setSelected(p[0]||null);persist(p,undefined,undefined,list)};
  const exportData=async()=>{const esc=v=>'"'+String(v??'').replace(/"/g,'""')+'"';const rows=[['type','date','duration_seconds','sets_completed','symptom_score','phase','note'],...history.map(h=>['session',h.date,h.durationSeconds,h.sets,'','','']),...checkins.map(x=>['checkin',x.date,'','',''+x.score,x.phase,x.note])];const csv=rows.map(row=>row.map(esc).join(',')).join('\n');try{await Share.share({title:'SpineCare local export',message:csv})}catch(e){Alert.alert('Export','Unable to open the share sheet on this device.')}};
  const togglePlan=e=>{const p=plan.includes(e.id)?plan.filter(id=>id!==e.id):[...plan,e.id];setPlan(p);persist(p)};
- const start=()=>{if(!plan.length){Alert.alert('SpineCare',t.choose);setTab(1);return}setSelected(plan[0]);setSets(0);poseSamples.current=[];lastCapture.current=0;setStartedAt(Date.now());setNow(Date.now());setActive(true);setTab(2);setPhase('before');speak(t.voiceStart)};
- const finish=()=>{const item={id:String(Date.now()),date:new Date().toISOString(),durationSeconds:elapsed,sets,exerciseIds:plan.slice(),symptomBefore:phase==='before'?symptom:null,poseTrace:poseSamples.current.slice(),poseView:view};const h=[item,...history].slice(0,100);setHistory(h);persist(plan,h,checkins);setActive(false);setStartedAt(null);setPhase('after');setCameraOn(false);speak(t.voiceFinish);Alert.alert(t.sessionDone,t.saved)};
- const saveCheckin=()=>{const c=[{id:String(Date.now()),date:new Date().toISOString(),score:symptom,note:note.trim().slice(0,160),phase},...checkins].slice(0,100);setCheckins(c);persist(plan,history,c);setNote('');Alert.alert(t.saved,t.progressBody)};
- const clear=()=>Alert.alert(t.clear,t.confirmClear,[{text:t.no,style:'cancel'},{text:t.yes,style:'destructive',onPress:async()=>{setHistory([]);setCheckins([]);await persist(plan,[],[])}}]);
+ const start=async()=>{if(!plan.length){Alert.alert('SpineCare',t.choose);setTab(1);return}
+   if(active||sessionSaving)return;
+   const at=Date.now();
+   try{await storeRef.current.update({draftSession:{startedAt:at,selected:plan[0],exerciseIds:plan.slice(),sets:0,poseTrace:[],poseView:view,cameraPrefs}})}
+   catch(e){Alert.alert(t.storageErrorTitle,t.saveFailed);return}
+   setPendingDraft(null);setSelected(plan[0]);setSets(0);poseSamples.current=[];lastCapture.current=0;
+   setStartedAt(at);setNow(at);setActive(true);setTab(2);setPhase('before');speak(t.voiceStart);
+  };
+  const restoreDraft=()=>{
+   if(!pendingDraft||active)return;
+   setStartedAt(pendingDraft.startedAt);setNow(Date.now());setSelected(pendingDraft.selected||plan[0]||null);
+   setSets(pendingDraft.sets||0);poseSamples.current=pendingDraft.poseTrace||[];
+   lastCapture.current=0;setActive(true);setPhase('before');setPendingDraft(null);setTab(2);
+  };
+  const discardDraft=async()=>{
+   try{await storeRef.current.update({draftSession:null});setPendingDraft(null)}
+   catch(e){Alert.alert(t.storageErrorTitle,t.saveFailed)}
+  };
+  useEffect(()=>{if(!active||!storageReady||!startedAt)return;
+   const writeDraft=()=>storeRef.current.update({draftSession:{
+    startedAt,selected,exerciseIds:plan.slice(),sets,poseTrace:poseSamples.current.slice(),
+    poseView:view,cameraPrefs
+   }}).catch(()=>{});
+   const id=setInterval(writeDraft,5000);
+   return()=>clearInterval(id);
+  },[active,storageReady,startedAt,selected,sets,plan,view,cameraPrefs]);
+ const finish=async()=>{
+   if(!active||!startedAt||savingSessionRef.current)return;
+   savingSessionRef.current=true;setSessionSaving(true);
+   const finishedAt=Date.now();
+   const item={id:String(finishedAt)+'-'+Math.random().toString(36).slice(2,8),
+    date:new Date(finishedAt).toISOString(),durationSeconds:Math.max(0,Math.floor((finishedAt-startedAt)/1000)),
+    sets,exerciseIds:plan.slice(),symptomBefore:phase==='before'?symptom:null,
+    poseTrace:poseSamples.current.slice(),poseView:view,cameraPrefs};
+   try{
+    const stored=await storeRef.current.appendSession(item);
+    setHistory(stored.history);setPendingDraft(null);
+    setReplay(stored.history[0]);setReplayIndex(0);setReplayPlaying(false);
+    setActive(false);setStartedAt(null);setPhase('after');setCameraOn(false);
+    setTab(4);speak(t.voiceFinish);
+    Alert.alert(t.sessionDone,item.poseTrace.length?t.reviewSaved:t.savedNoTrace);
+   }catch(e){Alert.alert(t.storageErrorTitle,t.saveFailed+' '+String(e.message||e))}
+   finally{savingSessionRef.current=false;setSessionSaving(false)}
+  };
+ const saveCheckin=async()=>{const item={id:String(Date.now()),date:new Date().toISOString(),score:symptom,note:note.trim().slice(0,160),phase};
+   try{const stored=await storeRef.current.appendCheckin(item);setCheckins(stored.checkins);setNote('');Alert.alert(t.saved,t.progressBody)}
+   catch(e){Alert.alert(t.storageErrorTitle,t.saveFailed+' '+String(e.message||e))}
+  };
+ const clear=()=>Alert.alert(t.clear,t.confirmClear,[{text:t.no,style:'cancel'},{text:t.yes,style:'destructive',onPress:async()=>{
+    try{const stored=await storeRef.current.clearHistory();setHistory(stored.history);setCheckins(stored.checkins);setReplay(null);setPendingDraft(null)}
+    catch(e){Alert.alert(t.storageErrorTitle,t.saveFailed+' '+String(e.message||e))}
+   }}]);
  const guide=[t.frontGuide,t.sideGuide,t.backGuide,t.obliqueGuide][view];
  const replaySamples=replay?.poseTrace||[];
  const replayFrame=replaySamples[Math.min(replayIndex,replaySamples.length-1)]||null;
- const changeLanguage=v=>{setLang(v);AsyncStorage.getItem(STORE).then(raw=>{const d=raw?JSON.parse(raw):{};return AsyncStorage.setItem(STORE,JSON.stringify({...d,lang:v}))}).catch(()=>{})};
+ const changeLanguage=v=>{setLang(v);storeRef.current.update({lang:v}).catch(()=>Alert.alert(t.storageErrorTitle,t.saveFailed))};
 
  const tabNames=[...t.tabs];
  return <SafeAreaView style={s.safe}><StatusBar style="auto"/>
